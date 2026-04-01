@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tajmeel · Guest Attendance</title>
+<style>
+  :root {
+    --bg: #140f0a;
+    --bg2: #1e1510;
+    --bg3: #2a1c12;
+    --card: #231810;
+    --gold: #c4a87a;
+    --gold2: #a88a5a;
+    --gold3: #7a6040;
+    --cream: #ead8bf;
+    --red: #8a2535;
+    --border: rgba(196,168,122,0.15);
+    --border2: rgba(196,168,122,0.08);
+    --green: #2d7a4a;
+    --green-light: #3a9e60;
+    --text-muted: #6a5540;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); font-family: -apple-system, 'Helvetica Neue', sans-serif; color: var(--cream); }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-left h1 { font-size: 22px; font-weight: 300; letter-spacing: 1px; color: var(--cream); }
+  .header-left span { font-size: 10px; letter-spacing: 3px; color: var(--gold3); text-transform: uppercase; }
+  .header-stats { display: flex; gap: 16px; align-items: center; }
+  .stat-box { text-align: center; }
+  .stat-box .num { font-size: 22px; font-weight: 600; color: var(--gold); line-height: 1; }
+  .stat-box .lbl { font-size: 9px; letter-spacing: 2px; color: var(--gold3); text-transform: uppercase; }
+  .stat-divider { width: 1px; height: 30px; background: var(--border); }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .add-btn {
+    background: var(--red); color: white; border: none; border-radius: 10px;
+    padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; letter-spacing: 0.3px;
+  }
+  .add-btn:active { opacity: 0.8; }
+  .report-btn {
+    background: var(--bg3); color: var(--gold); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; letter-spacing: 0.3px;
+  }
+  .report-btn:active { opacity: 0.8; }
+
+  /* ── REPORT MODAL ── */
+  .report-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85); z-index: 300;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .report-overlay.show { display: flex; }
+  .report-box {
+    background: #fff; border-radius: 16px;
+    width: 100%; max-width: 720px; max-height: 88vh;
+    overflow-y: auto; padding: 36px 32px;
+    color: #1a1208;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  }
+  .report-box .r-logo { font-size: 26px; font-weight: 300; letter-spacing: 2px; color: #1a1208; margin-bottom: 2px; }
+  .report-box .r-sub { font-size: 10px; letter-spacing: 4px; color: #9a7a4a; text-transform: uppercase; margin-bottom: 4px; }
+  .report-box .r-date { font-size: 11px; color: #9a7a4a; margin-bottom: 24px; }
+  .report-box hr { border: none; border-top: 1px solid #e8e0d0; margin: 18px 0; }
+  .r-stats { display: flex; gap: 0; border: 1px solid #e8e0d0; border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+  .r-stat { flex: 1; padding: 16px; text-align: center; border-right: 1px solid #e8e0d0; }
+  .r-stat:last-child { border-right: none; }
+  .r-stat .r-num { font-size: 32px; font-weight: 700; color: #8a2535; line-height: 1; }
+  .r-stat .r-lbl { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #9a7a4a; margin-top: 4px; }
+  .r-section-title {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #9a7a4a;
+    margin: 20px 0 10px;
+  }
+  .r-seg-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .r-seg-name { font-size: 13px; font-weight: 500; color: #1a1208; width: 200px; flex-shrink: 0; }
+  .r-bar-wrap { flex: 1; background: #f0ebe0; border-radius: 4px; height: 8px; overflow: hidden; }
+  .r-bar-fill { height: 100%; border-radius: 4px; background: #8a2535; }
+  .r-seg-count { font-size: 12px; color: #6a5040; width: 60px; text-align: right; flex-shrink: 0; }
+  .r-guest-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .r-guest-table th { text-align: left; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #9a7a4a; padding: 6px 8px; border-bottom: 1px solid #e8e0d0; }
+  .r-guest-table td { padding: 7px 8px; border-bottom: 1px solid #f0ebe0; vertical-align: top; }
+  .r-guest-table tr:last-child td { border-bottom: none; }
+  .r-status-in { display: inline-block; background: #d4edda; color: #1a6a35; border-radius: 4px; padding: 1px 8px; font-size: 10px; font-weight: 600; letter-spacing: 1px; }
+  .r-status-out { display: inline-block; background: #f8e8e0; color: #8a2535; border-radius: 4px; padding: 1px 8px; font-size: 10px; font-weight: 600; letter-spacing: 1px; }
+  .report-actions { display: flex; gap: 10px; margin-bottom: 24px; }
+  .r-print-btn { flex: 1; padding: 14px; background: #1a1208; color: #e8d8b0; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .r-close-btn { padding: 14px 20px; background: transparent; color: #9a7a4a; border: 1px solid #e0d8c8; border-radius: 10px; font-size: 15px; cursor: pointer; }
+  .r-noshow-highlight { background: #fff8f5; }
+
+  @media print {
+    .report-overlay { position: static; background: white; padding: 0; }
+    .report-box { max-height: none; box-shadow: none; border-radius: 0; }
+    .report-actions { display: none; }
+  }
+
+  /* ── SEARCH ── */
+  .search-bar {
+    padding: 10px 20px 0;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border2);
+  }
+  .search-input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 16px 10px 40px; font-size: 15px;
+    color: var(--cream); outline: none; position: relative;
+  }
+  .search-wrap { position: relative; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gold3); font-size: 16px; pointer-events: none; }
+  .search-input::placeholder { color: var(--gold3); }
+
+  /* ── SEGMENT TABS ── */
+  .tabs-wrap {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px 0;
+    overflow-x: auto;
+    display: flex;
+    gap: 6px;
+    scrollbar-width: none;
+  }
+  .tabs-wrap::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .tab .tab-count {
+    background: rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 11px;
+    min-width: 22px;
+    text-align: center;
+  }
+  .tab.active { background: var(--bg); border-color: var(--border); color: var(--gold); }
+  .tab.active .tab-count { background: var(--gold); color: #000; }
+  .tab:not(.active) { color: var(--gold3); background: transparent; }
+  .tab:not(.active):active { background: var(--bg3); }
+
+  /* ── GUEST LIST ── */
+  .list-area {
+    overflow-y: auto;
+    height: calc(100vh - 195px);
+    padding: 12px 20px 30px;
+  }
+  .segment-header {
+    display: flex; align-items: center; gap: 12px;
+    margin: 18px 0 10px;
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold3);
+  }
+  .segment-header:first-child { margin-top: 4px; }
+  .segment-line { flex: 1; height: 1px; background: var(--border2); }
+  .segment-badge {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 5px; padding: 2px 8px;
+    font-size: 9px; letter-spacing: 2px; color: var(--gold3);
+  }
+
+  .guest-card {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+  }
+  .guest-card.checked-in {
+    background: rgba(45,122,74,0.12);
+    border-color: rgba(58,158,96,0.35);
+  }
+  .guest-card:active { opacity: 0.85; }
+
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 600; flex-shrink: 0;
+    letter-spacing: -0.5px;
+  }
+  .avatar-c1 { background: rgba(138,37,53,0.25); color: #e8a0a8; }
+  .avatar-c2 { background: rgba(138,90,30,0.25); color: #e8c080; }
+  .avatar-c3 { background: rgba(80,60,30,0.3); color: #c4a870; }
+  .avatar-c4 { background: rgba(40,70,100,0.3); color: #80b0d0; }
+  .avatar-walk { background: rgba(70,50,120,0.3); color: #a080d0; }
+
+  .guest-info { flex: 1; min-width: 0; }
+  .guest-name {
+    font-size: 15px; font-weight: 500; color: var(--cream);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .guest-role {
+    font-size: 11px; color: var(--gold3); margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .guest-desc {
+    font-size: 11px; color: #8a7060; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .guest-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+  .importance { font-size: 11px; }
+  .circle-tag {
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 4px; border: 1px solid;
+  }
+  .tag-c1 { color: #e8a0a8; border-color: rgba(232,160,168,0.25); background: rgba(138,37,53,0.12); }
+  .tag-c2 { color: #e8c080; border-color: rgba(232,192,128,0.25); background: rgba(138,90,30,0.12); }
+  .tag-c3 { color: var(--gold); border-color: rgba(196,168,122,0.25); background: rgba(196,168,122,0.08); }
+  .tag-c4 { color: #80b0d0; border-color: rgba(128,176,208,0.25); background: rgba(40,70,100,0.12); }
+  .tag-walk { color: #a080d0; border-color: rgba(160,128,208,0.25); background: rgba(70,50,120,0.12); }
+
+  .checkin-btn {
+    flex-shrink: 0;
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+  }
+  .checkin-btn.done {
+    background: var(--green);
+    border-color: var(--green-light);
+  }
+  .checkin-btn:active { transform: scale(0.9); }
+
+  /* ── ADD GUEST MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    width: 90%; max-width: 480px;
+  }
+  .modal h2 { font-size: 18px; font-weight: 400; color: var(--cream); margin-bottom: 6px; }
+  .modal p { font-size: 12px; color: var(--gold3); margin-bottom: 20px; letter-spacing: 0.5px; }
+  .form-field { margin-bottom: 14px; }
+  .form-field label { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold3); margin-bottom: 6px; }
+  .form-field input, .form-field select, .form-field textarea {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; font-size: 15px;
+    color: var(--cream); outline: none; font-family: inherit;
+  }
+  .form-field textarea { height: 70px; resize: none; }
+  .form-field select { appearance: none; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel {
+    flex: 1; padding: 13px; border: 1px solid var(--border);
+    background: transparent; color: var(--gold3); border-radius: 10px;
+    font-size: 15px; cursor: pointer;
+  }
+  .btn-save {
+    flex: 2; padding: 13px; border: none;
+    background: var(--red); color: white; border-radius: 10px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .btn-save:active, .btn-cancel:active { opacity: 0.8; }
+
+  /* ── DETAIL SHEET ── */
+  .detail-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 150;
+    align-items: flex-end; justify-content: center;
+  }
+  .detail-overlay.show { display: flex; }
+  .detail-sheet {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 24px;
+    width: 100%;
+    max-width: 768px;
+  }
+  .detail-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+  .detail-avatar {
+    width: 70px; height: 70px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 600; margin-bottom: 14px;
+  }
+  .detail-name { font-size: 22px; font-weight: 400; color: var(--cream); margin-bottom: 4px; }
+  .detail-role { font-size: 13px; color: var(--gold); margin-bottom: 12px; }
+  .detail-desc { font-size: 14px; color: #a09080; line-height: 1.6; margin-bottom: 16px; }
+  .detail-row { display: flex; gap: 10px; margin-bottom: 20px; }
+  .detail-chip {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid;
+    font-size: 11px; letter-spacing: 1px;
+  }
+  .detail-checkin {
+    width: 100%; padding: 15px; border-radius: 12px; border: none;
+    font-size: 16px; font-weight: 600; cursor: pointer; letter-spacing: 0.5px;
+  }
+  .detail-checkin.not-in { background: var(--green); color: white; }
+  .detail-checkin.is-in { background: var(--bg3); color: var(--gold3); border: 1px solid var(--border); }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 60px 20px; color: var(--gold3); }
+  .empty .e-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  /* ── TBC badge ── */
+  .tbc-badge { background: rgba(180,120,0,0.2); color: #c8a030; border: 1px solid rgba(200,160,48,0.3); border-radius: 4px; padding: 1px 6px; font-size: 9px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>tajmeel <span style="font-size:11px;color:var(--gold3);letter-spacing:2px;">CLINIC</span></h1>
+    <div><span>Launch · April 1, 2026</span></div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-box"><div class="num" id="stat-checked">0</div><div class="lbl">Arrived</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-box"><div class="num" id="stat-total">0</div><div class="lbl">Invited</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-box"><div class="num" id="stat-pct">0%</div><div class="lbl">Turnout</div></div>
+  </div>
+  <div class="header-actions">
+    <button class="report-btn" onclick="openReport()">📋 Report</button>
+    <button class="add-btn" onclick="openAddModal()">＋ Walk-in</button>
+  </div>
+</div>
+
+<div class="search-bar">
+  <div class="search-wrap" style="padding-bottom:10px;">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="search" type="text" placeholder="Search guest name…" oninput="renderList()">
+  </div>
+</div>
+
+<div class="tabs-wrap" id="tabs"></div>
+
+<div class="list-area" id="list"></div>
+
+<!-- REPORT MODAL -->
+<div class="report-overlay" id="reportOverlay">
+  <div class="report-box" id="reportContent">
+    <!-- generated by openReport() -->
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h2>Add Walk-in Guest</h2>
+    <p>Guest not on the list? Add them manually.</p>
+    <div class="form-field">
+      <label>Full Name</label>
+      <input type="text" id="wName" placeholder="Name">
+    </div>
+    <div class="form-field">
+      <label>Role / Title</label>
+      <input type="text" id="wRole" placeholder="e.g. Influencer, Media, VIP">
+    </div>
+    <div class="form-field">
+      <label>Segment</label>
+      <select id="wSegment">
+        <option value="c1">Circle 01 – Royalty & Govt</option>
+        <option value="c2">Circle 02 – Celebrities & Paid</option>
+        <option value="c3" selected>Circle 03/04 – Influencers/VIPs</option>
+        <option value="c4">Circle 05 – Media / PR</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label>Notes (optional)</label>
+      <textarea id="wNotes" placeholder="Any additional notes…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="btn-save" onclick="saveWalkIn()">Add & Check In ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL SHEET -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail(event)">
+  <div class="detail-sheet" id="detailSheet">
+    <div class="detail-handle"></div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+      <div class="detail-avatar" id="dAvatar"></div>
+      <div>
+        <div class="detail-name" id="dName"></div>
+        <div class="detail-role" id="dRole"></div>
+      </div>
+    </div>
+    <div class="detail-row" id="dChips"></div>
+    <div class="detail-desc" id="dDesc"></div>
+    <button class="detail-checkin" id="dCheckinBtn" onclick="toggleFromDetail()"></button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// GUEST DATA
+// ══════════════════════════════════════════════════════════
+const SEGMENTS = {
+  c1: { label: "Circle 01", full: "Royalty & Senior Govt.", color: "c1", tabColor: "#8a2535" },
+  c2: { label: "Circle 02/03", full: "Celebrities & Paid Collaborators", color: "c2", tabColor: "#8b4a1e" },
+  c3: { label: "Circle 04", full: "Guest Influencers & VIPs", color: "c3", tabColor: "#7a6030" },
+  c4: { label: "Circle 05", full: "Media & PR", color: "c4", tabColor: "#285070" },
+  walk: { label: "Walk-ins", full: "Walk-in Guests", color: "walk", tabColor: "#4a3278" },
+};
+
+let guests = [
+  // ── CIRCLE 01 – Royalty & Senior Govt ──
+  { id:1, seg:"c1", name:"H.E Dr. Thani bin Ahmed Al Zeyoudi", role:"Guest of Honour · Minister of Foreign Trade, UAE", imp:3, tbc:false, desc:"UAE Minister of State for Foreign Trade and one of the most influential economic voices in the Gulf. His presence as Guest of Honour is the highest prestige signal for the launch." },
+  { id:2, seg:"c1", name:"H.H Sheikha Shamsa Bint Hasher Al Maktoum", role:"UAE Royal Family", imp:3, tbc:true, desc:"Member of the Al Maktoum royal family of Dubai. Her attendance would carry immense prestige and elevate Tajmeel's positioning in the highest social circles of the UAE." },
+  { id:3, seg:"c1", name:"H.H. Sheikh Ahmed bin Rashid Al Maktoum", role:"Chairman & President, Al Wasl Club", imp:3, tbc:false, desc:"Prominent member of the Dubai royal family and Chairman of Al Wasl FC. Significant social and institutional influence across UAE sporting and business circles." },
+  { id:4, seg:"c1", name:"H.E. Laila Rahhal El Atfani", role:"Goodwill Ambassador, UAE", imp:3, tbc:false, desc:"Goodwill Ambassador active in humanitarian and cultural diplomacy across the UAE and wider Arab world. Strong ties to government and civil society networks." },
+  { id:5, seg:"c1", name:"HE Dr Hind Alhajri", role:"Sharjah Advisory Council", imp:3, tbc:false, desc:"Senior advisory figure connected to Sharjah's leadership. A respected voice in policy and women's empowerment circles across the Northern Emirates." },
+  { id:6, seg:"c1", name:"H.E. Turki bin Abdullah Al Dakhil", role:"Ambassador of Saudi Arabia to UAE", imp:3, tbc:false, desc:"Saudi Arabia's top diplomatic representative in the UAE. Attendance connects Tajmeel to the vast Saudi high-net-worth and royal network." },
+  { id:7, seg:"c1", name:"H.E. Saeed bin Ali Al Hajri", role:"Consul General of Qatar in Dubai", imp:3, tbc:false, desc:"Qatar's senior diplomatic presence in Dubai. Key contact for GCC diplomatic and business networks with strong ties to Qatari elites." },
+  { id:8, seg:"c1", name:"Excellency Issam Kazim", role:"CEO, Dubai Tourism & Commerce Marketing", imp:3, tbc:false, desc:"Heads Dubai's global tourism and commerce marketing authority. His attendance directly connects Tajmeel to Dubai's official branding and tourism machine." },
+  { id:9, seg:"c1", name:"H.E Claudia Pinto", role:"Head of Sustainability & Empowering Women, ME", imp:2, tbc:false, desc:"Senior figure championing sustainability and women's empowerment across the Middle East. Ideal ally for brand positioning around wellness and female empowerment." },
+  { id:10, seg:"c1", name:"H.E. Viorel-Riceard Badea", role:"Consul General of Romania in Dubai", imp:2, tbc:false, desc:"Romanian diplomatic representative in Dubai, contributing to Tajmeel's multinational and multicultural prestige." },
+  { id:11, seg:"c1", name:"H.E. Judha Nugraha", role:"Ambassador, Indonesian Embassy to UAE", imp:2, tbc:false, desc:"Indonesia's top diplomatic representative, connecting Tajmeel to the large and influential Indonesian community in the UAE and government circles." },
+
+  // ── CIRCLE 02/03 – Celebrities & Paid Collaborators ──
+  { id:12, seg:"c2", name:"Hala Owaiz", role:"Influencer · 1M+ Followers", imp:3, tbc:false, desc:"Award-winning Dubai-based beauty educator and influencer with over 1 million followers. Collaborates with major brands including Max Factor and Huda Beauty. High-impact reach for Tajmeel's audience." },
+  { id:13, seg:"c2", name:"Ebraheem Al Samahi", role:"Influencer · 'Mr. Dubai' · 3M+ Followers", imp:3, tbc:false, desc:"Known as 'Mr. Dubai', one of the UAE's most famous male social media personalities with massive reach on Instagram and YouTube. His endorsement carries enormous cultural clout in the region." },
+  { id:14, seg:"c2", name:"Latifa Al Shamsi", role:"Influencer · Emirati Content Creator", imp:3, tbc:false, desc:"Prominent Emirati influencer with strong local following. High relevance for reaching UAE-national and GCC audiences, adding authentic local prestige." },
+  { id:15, seg:"c2", name:"Dr. Sheen Gurib", role:"Influencer · Medical & Beauty", imp:2, tbc:false, desc:"Medical professional turned influencer bridging clinical credibility with aspirational beauty content. Ideal for Tajmeel's premium, science-backed aesthetic positioning." },
+  { id:16, seg:"c2", name:"Sarah Sharif", role:"Influencer", imp:2, tbc:false, desc:"Dubai-based lifestyle and beauty influencer with an engaged following. Active in the UAE's social content scene, adding solid mid-tier reach." },
+  { id:17, seg:"c2", name:"Daphnila Vis", role:"Model / Influencer", imp:2, tbc:false, desc:"Fashion model and influencer bringing European luxury aesthetic sensibility and a polished visual brand to Tajmeel's campaign." },
+  { id:18, seg:"c2", name:"Ellen Hellkvist", role:"Model / Influencer", imp:2, tbc:false, desc:"Scandinavian model and influencer based in Dubai, known for clean luxury lifestyle content. Appeals to international high-net-worth audiences in the UAE." },
+  { id:19, seg:"c2", name:"Amal", role:"Model / Beauty Queen", imp:2, tbc:false, desc:"Beauty queen and model with a strong presence in UAE's glamour and fashion circuit. Brings aspirational beauty positioning to the launch." },
+  { id:20, seg:"c2", name:"Olga", role:"Influencer / Model", imp:1, tbc:false, desc:"Dubai-based lifestyle influencer and model contributing to the brand's premium visual imagery and European-audience reach." },
+  { id:21, seg:"c2", name:"Anna", role:"Influencer / Model", imp:1, tbc:false, desc:"Lifestyle content creator and model active in Dubai's luxury social scene. Adds to the diverse multinational influencer mix at the launch." },
+
+  // ── CIRCLE 04 – Guest Influencers / VIPs ──
+  { id:22, seg:"c3", name:"Marmar R. Al Hilali", role:"Influencer", imp:2, tbc:false, desc:"UAE-based lifestyle influencer known for elegant content and strong ties to the Arab fashion and beauty community." },
+  { id:23, seg:"c3", name:"Taya Kruzz", role:"Influencer", imp:2, tbc:false, desc:"Dubai-based content creator with a growing following in fashion and beauty. Brings younger, trend-forward energy to the event." },
+  { id:24, seg:"c3", name:"Saleh Al Braik", role:"Influencer", imp:2, tbc:false, desc:"UAE influencer with engagement across Gulf Arabic-speaking audiences. Good for organic reach into Saudi and Emirati communities." },
+  { id:25, seg:"c3", name:"Ilhem Sghayer", role:"Influencer", imp:2, tbc:false, desc:"North African-origin Dubai influencer bridging Arab world audiences with strong fashion and lifestyle content." },
+  { id:26, seg:"c3", name:"Andrea Zoya", role:"Influencer", imp:2, tbc:false, desc:"Dubai lifestyle and beauty influencer with an international aesthetic. Contributes to Tajmeel's cross-cultural appeal." },
+  { id:27, seg:"c3", name:"Rosemin", role:"Influencer", imp:1, tbc:false, desc:"Dubai-based content creator active in the beauty and lifestyle space with a loyal community following." },
+  { id:28, seg:"c3", name:"Olivia Morris", role:"Influencer / Grazia ME", imp:2, tbc:false, desc:"Influencer and contributor to Grazia Middle East. Dual role as content creator and media figure gives strong editorial + social reach." },
+  { id:29, seg:"c3", name:"Aishwarya Ajit", role:"Influencer / TV Presenter", imp:2, tbc:false, desc:"Well-known Indian actress and TV presenter based in Dubai with a YouTube channel and loyal South Asian diaspora following. Founder of her own hair extension brand." },
+  { id:30, seg:"c3", name:"Vimi Joshi", role:"Influencer", imp:1, tbc:false, desc:"Dubai-based lifestyle influencer popular within the South Asian community in the UAE, providing strong ethnic community reach." },
+  { id:31, seg:"c3", name:"Coach Meddy", role:"Influencer / Fitness Coach", imp:2, tbc:false, desc:"Well-known Dubai-based fitness influencer and coach with a health-conscious community. Bridges wellness and beauty — relevant to Tajmeel's positioning." },
+  { id:32, seg:"c3", name:"Natalia Marruo Rios", role:"Influencer", imp:1, tbc:false, desc:"Latin-origin Dubai influencer contributing to the diverse multicultural mix at the launch with lifestyle content." },
+  { id:33, seg:"c3", name:"Eva Zuk", role:"Influencer", imp:1, tbc:false, desc:"European-origin influencer based in Dubai creating luxury and beauty content for an international audience." },
+  { id:34, seg:"c3", name:"Hanna Dolhykh", role:"Influencer", imp:1, tbc:false, desc:"Ukrainian-origin Dubai influencer with a polished aesthetic appealing to Eastern European diaspora and luxury audiences." },
+  { id:35, seg:"c3", name:"Angy Cristal Rose", role:"Influencer / Networking Women", imp:1, tbc:false, desc:"Part of Dubai's professional women networking scene. Adds community-building value and referral potential for Tajmeel's female client base." },
+  { id:36, seg:"c3", name:"Natalie Lefevre", role:"Influencer", imp:1, tbc:false, desc:"French-origin Dubai lifestyle influencer with appeal to the Francophone and European expat community." },
+  { id:37, seg:"c3", name:"Rhea Harmoush", role:"Influencer", imp:2, tbc:false, desc:"Lebanese-origin Dubai influencer with strong Arab audience engagement. Brings authentic Levantine beauty sensibility to the brand." },
+  { id:38, seg:"c3", name:"Tracy Harmoush", role:"Influencer", imp:2, tbc:false, desc:"Paired with Rhea, this influencer duo from Lebanon adds a trusted voice in the Arab beauty and lifestyle space." },
+  { id:39, seg:"c3", name:"Ghizlan Guenez", role:"Influencer / Entrepreneur", imp:2, tbc:false, desc:"Founder of The Modist, a former groundbreaking modest fashion platform. Well-respected UAE entrepreneur with premium brand credibility and fashion-forward audience." },
+  { id:40, seg:"c3", name:"Igor Sivov", role:"Influencer", imp:1, tbc:false, desc:"Russian-origin Dubai influencer with reach into the large Russian-speaking expat community in the UAE." },
+  { id:41, seg:"c3", name:"Chahrazad Rizk", role:"Influencer", imp:1, tbc:false, desc:"Algerian-origin influencer based in Dubai covering lifestyle and beauty, reaching North African audiences across the Arab world." },
+  { id:42, seg:"c3", name:"Sheri J", role:"Presenter, Dubai One TV", imp:2, tbc:false, desc:"Television presenter on Dubai One, one of UAE's main English-language channels. Media and influencer crossover — highly valuable for on-air and social amplification." },
+  { id:43, seg:"c3", name:"Maria Antonela Axinte", role:"Chairperson, MENA Assoc. for Genetic Counselors", imp:2, tbc:false, desc:"Medical and scientific leader in the region. Brings clinical credibility and high-profile professional networking value to Tajmeel's medical aesthetic positioning." },
+  { id:44, seg:"c3", name:"Sabu Thomas", role:"COO, Leader Healthcare", imp:2, tbc:false, desc:"C-suite healthcare executive whose presence endorses Tajmeel's clinical credentials and creates B2B network potential in the medical sector." },
+  { id:45, seg:"c3", name:"Dr. Hisham Hakim", role:"Chairman, American Spine Center / ABRM", imp:2, tbc:false, desc:"Prominent physician and medical board chair. His presence elevates Tajmeel's medical credibility and positions the clinic within Dubai's top-tier healthcare circles." },
+  { id:46, seg:"c3", name:"Sabinije Von Gaffke", role:"Influencer / Founder, SuperHuman.net", imp:2, tbc:false, desc:"Entrepreneur and biohacking influencer, founder of SuperHuman.net. Connects Tajmeel to the growing wellness-tech and longevity beauty movement." },
+  { id:47, seg:"c3", name:"Thureya Almaazmi", role:"Sharjah Government", imp:2, tbc:false, desc:"Official from Sharjah Government. Presence extends Tajmeel's government relations beyond Dubai into the Northern Emirates." },
+  { id:48, seg:"c3", name:"Kseniya Morsakova", role:"Founder of Delicato", imp:2, tbc:false, desc:"Entrepreneur and founder of Delicato, a Dubai-based luxury brand. Brings premium brand ecosystem connections and high-net-worth client referrals." },
+  { id:49, seg:"c3", name:"Mona Javan", role:"Entrepreneur / Influencer", imp:2, tbc:false, desc:"Iranian-origin Dubai entrepreneur and content creator. Active in luxury lifestyle and business communities with strong personal brand." },
+  { id:50, seg:"c3", name:"Farah Eddin", role:"Model / Influencer", imp:2, tbc:false, desc:"Dubai-based model and influencer with strong visual content and fashion brand collaborations in the Gulf market." },
+  { id:51, seg:"c3", name:"Ellen Helkvist", role:"Model / Influencer", imp:2, tbc:false, desc:"Scandinavian luxury lifestyle influencer and model in Dubai. Appeals to European expat and international luxury audiences." },
+  { id:52, seg:"c3", name:"Amal (Model)", role:"Model / Beauty Queen", imp:2, tbc:false, desc:"Beauty queen and model with a strong presence in the UAE's glamour and fashion circuit." },
+  { id:53, seg:"c3", name:"Andra Contiu", role:"Influencer", imp:1, tbc:false, desc:"Romanian-origin Dubai influencer adding Eastern European community reach to the event's multinational profile." },
+  { id:54, seg:"c3", name:"Rima Zanoun", role:"Influencer", imp:2, tbc:false, desc:"Levantine influencer based in the UAE with a loyal following in Arabic-speaking beauty and lifestyle circles." },
+  { id:55, seg:"c3", name:"Rodica Miron", role:"Influencer", imp:1, tbc:false, desc:"European influencer in Dubai contributing to Tajmeel's multicultural guest mix and international reach." },
+  { id:56, seg:"c3", name:"Dr. Khawla Al Matrooshi", role:"VIP / Socialities", imp:2, tbc:false, desc:"UAE-based physician and socialite with connections to Dubai's elite social and medical circles. High-value referral potential for premium clinic clients." },
+  { id:57, seg:"c3", name:"Hasan Suzer", role:"VIP / Business", imp:2, tbc:false, desc:"Business figure in Dubai's international social circuit. Adds corporate and investor-class networking value to Tajmeel's launch." },
+  { id:58, seg:"c3", name:"Dr. Hafeel Ambalath", role:"VIP / Medical Professional", imp:2, tbc:false, desc:"Medical professional and community figure with ties to South Asian and Gulf professional networks." },
+  { id:59, seg:"c3", name:"Dr. Saya Pareeth", role:"VIP / Medical Professional", imp:2, tbc:false, desc:"Healthcare professional whose attendance adds medical community credibility and peer-to-peer endorsement for Tajmeel's clinical offerings." },
+  { id:60, seg:"c3", name:"Marina Korneva", role:"VIP / Socialities", imp:1, tbc:false, desc:"Russian-origin socialite in Dubai's high-society circle, adding to the clinic's luxury lifestyle positioning." },
+  { id:61, seg:"c3", name:"Dr. Henna Kuti", role:"VIP / Medical Professional", imp:2, tbc:false, desc:"Healthcare professional contributing to the clinical credibility and peer endorsement of Tajmeel at launch." },
+  { id:62, seg:"c3", name:"Indre Azizeh", role:"Networking Women", imp:1, tbc:false, desc:"Active in Dubai's professional women's networking community. Good for word-of-mouth and referral-driven client acquisition." },
+  { id:63, seg:"c3", name:"Loredana Ciobanu", role:"Networking Women", imp:1, tbc:false, desc:"Part of Dubai's Romanian and European business women community. Referral potential for the Eastern European expat clientele." },
+  { id:64, seg:"c3", name:"Ritu Rampal", role:"VIP / Socialities", imp:1, tbc:false, desc:"South Asian socialite in Dubai with connections to the Indian business and social community." },
+  { id:65, seg:"c3", name:"Barkha Shewakramani", role:"Networking Women", imp:2, tbc:false, desc:"Prominent figure in Dubai's Indian business women community with strong referral network among affluent South Asian expats." },
+  { id:66, seg:"c3", name:"Hamdan Bin Humaid", role:"VIP", imp:2, tbc:false, desc:"UAE VIP guest with ties to local community and government networks. Valuable for Tajmeel's national audience credibility." },
+  { id:67, seg:"c3", name:"Marie Cristine", role:"VIP / Socialities", imp:1, tbc:false, desc:"Dubai socialite contributing to the luxury lifestyle positioning of Tajmeel's launch event." },
+  { id:68, seg:"c3", name:"Moshe Kohli", role:"VIP / Business", imp:1, tbc:false, desc:"Business professional in Dubai adding to the international corporate mix of VIP guests." },
+  { id:69, seg:"c3", name:"Dr. Mishkat Shehata", role:"Networking Women / Medical", imp:2, tbc:false, desc:"Medical professional and active networker in Dubai's women's professional circles. Combines clinical credibility with referral community reach." },
+  { id:70, seg:"c3", name:"Bahar Krahn", role:"Networking Women", imp:1, tbc:false, desc:"Professional networker in Dubai's multicultural women's business community." },
+  { id:71, seg:"c3", name:"Anaam Baig", role:"Networking Women", imp:1, tbc:false, desc:"Active in Dubai's South Asian women's professional and social circles." },
+  { id:72, seg:"c3", name:"Mimi Nenkova", role:"Influencer", imp:2, tbc:false, desc:"Eastern European influencer in Dubai with an engaged following in the luxury beauty and fashion space." },
+  { id:73, seg:"c3", name:"Mohamad Al Jardali", role:"VIP · Al Safarini Family", imp:2, tbc:false, desc:"Representative of the respected Al Jardali / Al Safarini family — a well-established local UAE family with social and business significance." },
+  { id:74, seg:"c3", name:"Tatiana Novikova–Yamshchikova", role:"China–MENA Business Growth", imp:2, tbc:false, desc:"Business development specialist bridging China and MENA markets. Strategic contact for expanding Tajmeel into Asian high-net-worth channels." },
+  { id:75, seg:"c3", name:"Sura Abiya", role:"Influencer", imp:1, tbc:false, desc:"UAE-based lifestyle and beauty influencer contributing to Tajmeel's digital launch amplification." },
+  { id:76, seg:"c3", name:"Badryah", role:"Influencer", imp:1, tbc:false, desc:"Arabic-language beauty influencer with an organic following in the Gulf, valuable for GCC word-of-mouth reach." },
+  { id:77, seg:"c3", name:"Tota Magdy", role:"Blogger / Model", imp:2, tbc:false, desc:"Egyptian blogger and model based in Dubai with a strong following in the Arab beauty and fashion blogging scene." },
+  { id:78, seg:"c3", name:"Tasneem Akoula", role:"Influencer", imp:1, tbc:false, desc:"Dubai-based lifestyle influencer with organic community engagement among young Arab women." },
+  { id:79, seg:"c3", name:"Farah N. Eddin", role:"Influencer", imp:2, tbc:false, desc:"Model and influencer with strong fashion and beauty content and an established presence in the UAE digital scene." },
+  { id:80, seg:"c3", name:"Eng. Aliya Shaik Alkindi", role:"Ali Al Falasi Group", imp:2, tbc:false, desc:"Representative of the Ali Al Falasi Group — a prominent UAE family business group. Highly valuable for local business and community relations." },
+  { id:81, seg:"c3", name:"Dr. Aisha Belragad Al Falasi", role:"Ali Al Falasi Group", imp:2, tbc:false, desc:"Medical professional and member of the Al Falasi family group. Combines clinical credibility with the prestige of one of Dubai's established families." },
+  { id:82, seg:"c3", name:"Mr. Mehdi Al Jardani", role:"Ali Al Falasi Group", imp:2, tbc:false, desc:"Business figure from the Ali Al Falasi Group network. Important for Tajmeel's local business community relationships." },
+  { id:83, seg:"c3", name:"Mr. Samer Bin Khadra", role:"Ali Al Falasi Group", imp:2, tbc:false, desc:"Senior figure in the Al Falasi Group ecosystem with business development and community influence in Dubai." },
+  { id:84, seg:"c3", name:"Ms. Fatima Al Naqbi", role:"Ali Al Falasi Group", imp:2, tbc:false, desc:"Female representative of the Ali Al Falasi Group. Connected to UAE's women leadership and business networks." },
+  { id:85, seg:"c3", name:"Dr. Omar Almarzooqi", role:"Ali Al Falasi Group / Medical", imp:2, tbc:false, desc:"Medical professional affiliated with the Al Falasi Group. Strong combination of clinical credibility and UAE family network value." },
+  { id:86, seg:"c3", name:"Mr. Ghareeb Al Habs", role:"Ali Al Falasi Group", imp:2, tbc:false, desc:"Business figure within the Al Falasi Group, extending Tajmeel's relationships with one of Dubai's established business families." },
+  { id:87, seg:"c3", name:"Ms. Hanan Abdulrahman Al Muaini", role:"Director, Ministry of Health Dubai & NE", imp:3, tbc:false, desc:"Senior government official at the Ministry of Health for Dubai and Northern Emirates. Critical stakeholder for Tajmeel's regulatory and governmental relations." },
+  { id:88, seg:"c3", name:"Samer El Hachem", role:"President, MENA – APCO Worldwide", imp:3, tbc:false, desc:"MENA President of APCO Worldwide, one of the world's most respected PR and strategic communications firms. Extremely valuable for Tajmeel's communications strategy and regional network." },
+  { id:89, seg:"c3", name:"Dr. Muhammad Yusuf", role:"Head of Economic Affairs, Indonesian Embassy", imp:2, tbc:false, desc:"Diplomatic economic attaché representing Indonesian trade interests in the UAE. Relevant for international business development." },
+  { id:90, seg:"c3", name:"Mr. Widy Haryanto", role:"Deputy Director, ITPC Dubai – Indonesian Embassy", imp:2, tbc:false, desc:"Trade and investment promotion official at the Indonesian embassy, expanding Tajmeel's diplomatic reach." },
+  { id:91, seg:"c3", name:"Mrs. Fanny Astria", role:"Indonesian Embassy", imp:2, tbc:false, desc:"Indonesian Embassy official in Dubai, contributing to Tajmeel's multinational diplomatic guest profile." },
+
+  // ── CIRCLE 05 – Media / PR ──
+  { id:92, seg:"c4", name:"Milli Midwood – Cosmopolitan ME", role:"Cosmopolitan Middle East", imp:3, tbc:false, desc:"Representative from Cosmopolitan Middle East, one of the region's top lifestyle publications. Coverage here guarantees premium brand visibility among aspirational female readers." },
+  { id:93, seg:"c4", name:"Ayas – Khaleej Times", role:"Khaleej Times", imp:3, tbc:false, desc:"Reporter from the Khaleej Times, one of the UAE's leading English-language newspapers with broad readership. Essential for print and digital editorial coverage." },
+  { id:94, seg:"c4", name:"UAE BARQ", role:"UAE Media Outlet", imp:2, tbc:false, desc:"UAE-based digital media platform covering social trends and lifestyle. Strong social media distribution for launch news." },
+  { id:95, seg:"c4", name:"Maricar – Gulf Today", role:"Gulf Today Newspaper", imp:2, tbc:false, desc:"Gulf Today print and digital journalist. Adds mainstream UAE media coverage to Tajmeel's launch press kit." },
+  { id:96, seg:"c4", name:"Photographer – Gulf News", role:"Gulf News", imp:3, tbc:false, desc:"Gulf News is the UAE's largest English-language daily. Their photographer's presence means visual coverage in the country's most-read publication." },
+  { id:97, seg:"c4", name:"Sami Abdhulrau – Al Ittihad", role:"Al Ittihad (Arabic Press)", imp:3, tbc:false, desc:"Journalist from Al Ittihad, the UAE's premier Arabic-language newspaper. Critical for reaching Arabic-speaking audiences across the UAE and wider Gulf." },
+  { id:98, seg:"c4", name:"Lovin Dubai", role:"Digital Media / Viral Content", imp:2, tbc:false, desc:"Lovin Dubai is one of the UAE's most viral digital platforms, popular with expats and millennials. Coverage here drives high-volume social sharing." },
+  { id:99, seg:"c4", name:"Olivia Morris – Grazia ME", role:"Grazia Middle East", imp:3, tbc:false, desc:"Editorial contributor to Grazia Middle East — the region's premium fashion and beauty magazine. Coverage in Grazia directly elevates Tajmeel's luxury positioning." },
+  { id:100, seg:"c4", name:"Dhruv Maniar – Gulf Buzz", role:"Gulf Buzz", imp:2, tbc:false, desc:"Gulf Buzz covers trending stories across the Gulf region with a strong social media distribution. Good for organic online buzz generation." },
+  { id:101, seg:"c4", name:"Justin Harper – CEO Middle East", role:"CEO Middle East Magazine", imp:2, tbc:false, desc:"Representative from CEO Middle East, a business and leadership magazine read by C-suite executives. Positions Tajmeel in the premium B2B and business-to-leader space." },
+  { id:102, seg:"c4", name:"Shaneer Siddiqui – Brew News", role:"Brew News", imp:2, tbc:false, desc:"Digital news outlet Brew News covering UAE lifestyle and current affairs. Adds to the digital media coverage ecosystem for the launch." },
+  { id:103, seg:"c4", name:"Rihea – Iconic Episode", role:"Iconic Episode", imp:1, tbc:false, desc:"Lifestyle content platform covering events and personalities in the UAE's social scene." },
+  { id:104, seg:"c4", name:"Ronak Kotecha – ReviewRon", role:"ReviewRon", imp:2, tbc:false, desc:"Influential reviewer and digital content creator covering events and lifestyle in the UAE with a strong local following." },
+  { id:105, seg:"c4", name:"Delna Anand – L'Officiel Arabia", role:"L'Officiel Arabia", imp:3, tbc:false, desc:"L'Officiel Arabia is a prestigious French luxury magazine with Arab-world editions. Editorial coverage here places Tajmeel in the same tier as international luxury brands." },
+  { id:106, seg:"c4", name:"Sakshi & Gaurav – Social Kandura", role:"Social Kandura", imp:2, tbc:false, desc:"Dubai-based content creators covering social lifestyle. Their content reaches a mixed expat and South Asian audience in the UAE." },
+  { id:107, seg:"c4", name:"Natasha & Shereen – Global Trend Monitor", role:"Global Trend Monitor", imp:2, tbc:false, desc:"Trend reporting platform covering emerging lifestyle and business movements in the region. Good for positioning Tajmeel as a trendsetting aesthetic brand." },
+  { id:108, seg:"c4", name:"Mandy – Palm Jumeirah Community", role:"Palm Jumeirah Community", imp:2, tbc:false, desc:"Key community voice for one of Dubai's most affluent and exclusive neighbourhoods. Direct access to Tajmeel's prime target demographic." },
+  { id:109, seg:"c4", name:"Asianet", role:"South Asian TV Network", imp:2, tbc:false, desc:"Leading South Asian television network in the UAE. Reaches the large Indian and Malayalee expat community — a significant segment of Dubai's premium beauty consumers." },
+  { id:110, seg:"c4", name:"Mintu", role:"Media", imp:1, tbc:false, desc:"Media representative contributing to Tajmeel's regional press coverage at the launch event." },
+  { id:111, seg:"c4", name:"Rashid", role:"Media", imp:1, tbc:false, desc:"Media professional adding to the press coverage spectrum for Tajmeel's launch." },
+  { id:112, seg:"c4", name:"Mathrubhumi TV", role:"Malayalam Television Network", imp:2, tbc:false, desc:"One of Kerala's most-watched television channels with a major UAE viewer base. Provides strong reach into the affluent Malayalee diaspora — a key Tajmeel demographic." },
+  { id:113, seg:"c4", name:"Elvis", role:"Media / Content Creator", imp:1, tbc:false, desc:"Media personality and content creator contributing to the event's multicultural press presence." },
+  { id:114, seg:"c4", name:"Danish – UAE Stories", role:"UAE Stories", imp:2, tbc:false, desc:"UAE Stories is a popular digital storytelling platform. Coverage here provides authentic narrative-driven content about Tajmeel's launch journey." },
+];
+
+// ── STATE ──
+let activeTab = "all";
+let detailGuest = null;
+
+function getInitials(name) {
+  return name.replace(/^H\.H\.|^H\.E\.|^Dr\.|^Mr\.|^Mrs\.|^Ms\.|^Eng\./, '').trim()
+    .split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+function impStars(n) { return '★'.repeat(n) + '☆'.repeat(3-n); }
+function avatarClass(seg) { return 'avatar-' + (seg==='walk'?'walk':seg); }
+function tagClass(seg) { return 'tag-' + (seg==='walk'?'walk':seg); }
+function circleLabel(seg) {
+  const s = SEGMENTS[seg]; return s ? s.label : 'Walk-in';
+}
+
+function segCounts() {
+  const counts = { all: guests.length };
+  Object.keys(SEGMENTS).forEach(k => counts[k] = guests.filter(g=>g.seg===k).length);
+  return counts;
+}
+
+function buildTabs() {
+  const counts = segCounts();
+  const tabEl = document.getElementById('tabs');
+  const tabs = [
+    { key:'all', label:'All Guests' },
+    { key:'c1', label:'Royalty & Govt' },
+    { key:'c2', label:'Celebrities' },
+    { key:'c3', label:'Influencers & VIPs' },
+    { key:'c4', label:'Media & PR' },
+  ];
+  if (counts.walk > 0) tabs.push({ key:'walk', label:'Walk-ins' });
+
+  tabEl.innerHTML = tabs.map(t => `
+    <div class="tab ${activeTab===t.key?'active':''}" onclick="setTab('${t.key}')">
+      ${t.label}
+      <span class="tab-count">${counts[t.key]||0}</span>
+    </div>`).join('');
+}
+
+function setTab(k) { activeTab=k; buildTabs(); renderList(); }
+
+function renderList() {
+  const q = document.getElementById('search').value.toLowerCase();
+  let filtered = guests.filter(g => {
+    const matchSeg = activeTab==='all' || g.seg===activeTab;
+    const matchQ = !q || g.name.toLowerCase().includes(q) || g.role.toLowerCase().includes(q);
+    return matchSeg && matchQ;
+  });
+
+  updateStats();
+  const listEl = document.getElementById('list');
+  if (!filtered.length) {
+    listEl.innerHTML = `<div class="empty"><div class="e-icon">🔍</div><p>No guests found</p></div>`;
+    return;
+  }
+
+  // Group by segment
+  let html = '';
+  if (activeTab === 'all' && !q) {
+    Object.entries(SEGMENTS).forEach(([segKey, segInfo]) => {
+      const segGuests = filtered.filter(g=>g.seg===segKey);
+      if (!segGuests.length) return;
+      const checkedIn = segGuests.filter(g=>g.checked).length;
+      html += `<div class="segment-header">
+        <span class="segment-badge">${segInfo.label}</span>
+        <span style="font-size:10px;color:var(--gold3);">${segInfo.full}</span>
+        <div class="segment-line"></div>
+        <span style="color:var(--gold3);font-size:10px;">${checkedIn}/${segGuests.length}</span>
+      </div>`;
+      segGuests.forEach(g => { html += guestCard(g); });
+    });
+  } else {
+    filtered.forEach(g => { html += guestCard(g); });
+  }
+
+  listEl.innerHTML = html;
+}
+
+function guestCard(g) {
+  const initials = getInitials(g.name);
+  return `<div class="guest-card ${g.checked?'checked-in':''}" onclick="openDetail(${g.id})">
+    <div class="avatar ${avatarClass(g.seg)}">${g.checked ? '✓' : initials}</div>
+    <div class="guest-info">
+      <div class="guest-name">${g.name} ${g.tbc?'<span class="tbc-badge">TBC</span>':''}</div>
+      <div class="guest-role">${g.role}</div>
+      <div class="guest-desc">${g.desc}</div>
+      <div class="guest-meta">
+        <span style="color:${impColor(g.imp)};font-size:12px;">${impStars(g.imp)}</span>
+        <span class="circle-tag ${tagClass(g.seg)}">${circleLabel(g.seg)}</span>
+      </div>
+    </div>
+    <button class="checkin-btn ${g.checked?'done':''}" onclick="toggleCheckin(event,${g.id})">
+      ${g.checked ? '✓' : '○'}
+    </button>
+  </div>`;
+}
+
+function impColor(n) {
+  if (n===3) return '#e8c060';
+  if (n===2) return '#c4a870';
+  return '#7a6040';
+}
+
+function toggleCheckin(e, id) {
+  e.stopPropagation();
+  const g = guests.find(x=>x.id===id);
+  if (g) g.checked = !g.checked;
+  updateStats(); buildTabs(); renderList();
+}
+
+function updateStats() {
+  const checked = guests.filter(g=>g.checked).length;
+  const total = guests.length;
+  document.getElementById('stat-checked').textContent = checked;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-pct').textContent = total ? Math.round(checked/total*100)+'%' : '0%';
+}
+
+function openDetail(id) {
+  const g = guests.find(x=>x.id===id);
+  if (!g) return;
+  detailGuest = g;
+  document.getElementById('dAvatar').className = `detail-avatar ${avatarClass(g.seg)}`;
+  document.getElementById('dAvatar').textContent = getInitials(g.name);
+  document.getElementById('dName').textContent = g.name + (g.tbc?' (TBC)':'');
+  document.getElementById('dRole').textContent = g.role;
+  document.getElementById('dDesc').textContent = g.desc;
+  document.getElementById('dChips').innerHTML = `
+    <span class="detail-chip ${tagClass(g.seg)}">${circleLabel(g.seg)}</span>
+    <span class="detail-chip" style="color:${impColor(g.imp)};border-color:${impColor(g.imp)}44;">
+      ${impStars(g.imp)} Importance
+    </span>`;
+  updateDetailBtn(g);
+  document.getElementById('detailOverlay').classList.add('show');
+}
+
+function updateDetailBtn(g) {
+  const btn = document.getElementById('dCheckinBtn');
+  if (g.checked) {
+    btn.textContent = '✓ Checked In — Tap to Undo';
+    btn.className = 'detail-checkin is-in';
+  } else {
+    btn.textContent = '⊙  Check In Guest';
+    btn.className = 'detail-checkin not-in';
+  }
+}
+
+function toggleFromDetail() {
+  if (!detailGuest) return;
+  detailGuest.checked = !detailGuest.checked;
+  updateDetailBtn(detailGuest);
+  updateStats(); buildTabs(); renderList();
+}
+
+function closeDetail(e) {
+  if (e.target === document.getElementById('detailOverlay')) {
+    document.getElementById('detailOverlay').classList.remove('show');
+    detailGuest = null;
+  }
+}
+
+// ── ADD WALK-IN ──
+function openAddModal() { document.getElementById('addModal').classList.add('show'); }
+function closeAddModal() { document.getElementById('addModal').classList.remove('show'); }
+
+function saveWalkIn() {
+  const name = document.getElementById('wName').value.trim();
+  if (!name) { alert('Please enter a name.'); return; }
+  const role = document.getElementById('wRole').value.trim() || 'Walk-in Guest';
+  const seg = document.getElementById('wSegment').value;
+  const notes = document.getElementById('wNotes').value.trim();
+  const newId = Math.max(...guests.map(g=>g.id)) + 1;
+  guests.push({
+    id: newId, seg: 'walk',
+    name, role, imp: 1, tbc: false,
+    desc: notes || 'Walk-in guest added at the venue.',
+    checked: true,
+  });
+  document.getElementById('wName').value = '';
+  document.getElementById('wRole').value = '';
+  document.getElementById('wNotes').value = '';
+  closeAddModal();
+  activeTab = 'walk';
+  buildTabs(); renderList();
+}
+
+// ── REPORT ──
+function openReport() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+  const total   = guests.length;
+  const arrived = guests.filter(g=>g.checked).length;
+  const noshow  = total - arrived;
+  const walkins = guests.filter(g=>g.seg==='walk').length;
+  const pct     = Math.round(arrived/total*100);
+
+  // Per-segment breakdown
+  const segRows = Object.entries(SEGMENTS).map(([key, s]) => {
+    const sg = guests.filter(g=>g.seg===key);
+    const sc = sg.filter(g=>g.checked).length;
+    return { label: s.full, circle: s.label, total: sg.length, checked: sc };
+  }).filter(r=>r.total>0);
+
+  // Checked-in list
+  const checkedGuests = guests.filter(g=>g.checked);
+  const noshowGuests  = guests.filter(g=>!g.checked && g.seg!=='walk');
+
+  const segBarHtml = segRows.map(r => {
+    const pctBar = r.total ? Math.round(r.checked/r.total*100) : 0;
+    return `<div class="r-seg-bar">
+      <div class="r-seg-name">${r.circle} · ${r.label.split(' ').slice(0,3).join(' ')}</div>
+      <div class="r-bar-wrap"><div class="r-bar-fill" style="width:${pctBar}%"></div></div>
+      <div class="r-seg-count">${r.checked} / ${r.total}</div>
+    </div>`;
+  }).join('');
+
+  const guestRows = (list, showSeg) => list.map(g => `
+    <tr class="${!g.checked && g.seg!=='walk' ? 'r-noshow-highlight':''}">
+      <td>${g.name}</td>
+      <td style="color:#6a5040;">${g.role}</td>
+      ${showSeg ? `<td style="color:#9a7a4a;font-size:11px;">${circleLabel(g.seg)}</td>` : ''}
+      <td>${g.checked ? '<span class="r-status-in">ARRIVED</span>' : '<span class="r-status-out">NO SHOW</span>'}</td>
+    </tr>`).join('');
+
+  const html = `
+    <div class="r-logo">tajmeel</div>
+    <div class="r-sub">Clinic · Launch Event</div>
+    <div class="r-date">Attendance Report · ${dateStr} · Generated ${timeStr}</div>
+
+    <div class="report-actions">
+      <button class="r-print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+      <button class="r-close-btn" onclick="closeReport()">Close</button>
+    </div>
+
+    <div class="r-stats">
+      <div class="r-stat"><div class="r-num">${arrived}</div><div class="r-lbl">Arrived</div></div>
+      <div class="r-stat"><div class="r-num">${noshow}</div><div class="r-lbl">No Show</div></div>
+      <div class="r-stat"><div class="r-num">${walkins}</div><div class="r-lbl">Walk-ins</div></div>
+      <div class="r-stat"><div class="r-num">${pct}%</div><div class="r-lbl">Turnout</div></div>
+    </div>
+
+    <div class="r-section-title">Attendance by Circle</div>
+    ${segBarHtml}
+    <hr>
+
+    <div class="r-section-title">✅ Arrived (${checkedGuests.length})</div>
+    <table class="r-guest-table">
+      <thead><tr><th>Name</th><th>Role</th><th>Circle</th><th>Status</th></tr></thead>
+      <tbody>${guestRows(checkedGuests, true)}</tbody>
+    </table>
+
+    ${noshowGuests.length ? `
+    <hr>
+    <div class="r-section-title">❌ No Show (${noshowGuests.length})</div>
+    <table class="r-guest-table">
+      <thead><tr><th>Name</th><th>Role</th><th>Circle</th><th>Status</th></tr></thead>
+      <tbody>${guestRows(noshowGuests, true)}</tbody>
+    </table>` : ''}
+
+    ${walkins ? `
+    <hr>
+    <div class="r-section-title">➕ Walk-in Guests (${walkins})</div>
+    <table class="r-guest-table">
+      <thead><tr><th>Name</th><th>Role</th><th>Status</th></tr></thead>
+      <tbody>${guestRows(guests.filter(g=>g.seg==='walk'), false)}</tbody>
+    </table>` : ''}
+
+    <hr>
+    <div style="font-size:10px;color:#c0b090;text-align:center;margin-top:8px;">
+      Tajmeel Clinic · Confidential · ${dateStr}
+    </div>
+  `;
+
+  document.getElementById('reportContent').innerHTML = html;
+  document.getElementById('reportOverlay').classList.add('show');
+}
+
+function closeReport() {
+  document.getElementById('reportOverlay').classList.remove('show');
+}
+
+// ── INIT ──
+buildTabs();
+renderList();
+</script>
+</body>
+</html>
